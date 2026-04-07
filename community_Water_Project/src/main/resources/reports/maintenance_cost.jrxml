@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="maintenance_cost"
+              pageWidth="595" pageHeight="842"
+              columnWidth="535" leftMargin="30" rightMargin="30"
+              topMargin="20" bottomMargin="20">
+
+  <parameter name="YEAR" class="java.lang.Integer"/>
+
+  <queryString>
+    <![CDATA[
+      SELECT
+        mw.title,
+        mw.work_date,
+        mw.status,
+        CASE WHEN mw.tap_id IS NOT NULL THEN 'Tap' ELSE 'Tank' END AS infra_type,
+        COALESCE(pt.name, wt.name)             AS infra_name,
+        COALESCE(z1.name, z2.name)             AS zone,
+        mc.description                         AS cost_description,
+        mc.quantity,
+        mc.unit_cost,
+        mc.total_cost,
+        CONCAT(cm.first_name,' ',cm.last_name) AS performed_by
+      FROM maintenance_work mw
+      LEFT JOIN public_tap pt        ON pt.id  = mw.tap_id
+      LEFT JOIN water_tank wt        ON wt.id  = mw.tank_id
+      LEFT JOIN water_zone z1        ON z1.id  = pt.zone_id
+      LEFT JOIN water_zone z2        ON z2.id  = wt.zone_id
+      LEFT JOIN maintenance_cost mc  ON mc.maintenance_work_id = mw.id
+      LEFT JOIN committee_member cmt ON cmt.id = mw.performed_by
+      LEFT JOIN community_member cm  ON cm.id  = cmt.member_id
+      WHERE YEAR(mw.work_date) = $P{YEAR}
+      ORDER BY mw.work_date DESC, mw.id
+    ]]>
+  </queryString>
+
+  <field name="title"            class="java.lang.String"/>
+  <field name="work_date"        class="java.sql.Date"/>
+  <field name="status"           class="java.lang.String"/>
+  <field name="infra_type"       class="java.lang.String"/>
+  <field name="infra_name"       class="java.lang.String"/>
+  <field name="zone"             class="java.lang.String"/>
+  <field name="cost_description" class="java.lang.String"/>
+  <field name="quantity"         class="java.math.BigDecimal"/>
+  <field name="unit_cost"        class="java.math.BigDecimal"/>
+  <field name="total_cost"       class="java.math.BigDecimal"/>
+  <field name="performed_by"     class="java.lang.String"/>
+
+  <variable name="GRAND_TOTAL" class="java.math.BigDecimal" calculation="Sum">
+    <variableExpression><![CDATA[$F{total_cost}]]></variableExpression>
+  </variable>
+
+  <title>
+    <band height="80">
+      <staticText>
+        <reportElement x="0" y="0" width="535" height="35"/>
+        <textElement textAlignment="Center">
+          <font size="18" isBold="true"/>
+        </textElement>
+        <text><![CDATA[AquaCam Connect]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="0" y="35" width="535" height="25"/>
+        <textElement textAlignment="Center">
+          <font size="13" isBold="true"/>
+        </textElement>
+        <textFieldExpression>
+          <![CDATA["Maintenance Cost Report - " + $P{YEAR}]]>
+        </textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="0" y="60" width="535" height="20"/>
+        <textElement textAlignment="Center"><font size="10"/></textElement>
+        <textFieldExpression>
+          <![CDATA["Generated on: " + new java.util.Date().toString()]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </title>
+
+  <pageHeader>
+    <band height="0"/>
+  </pageHeader>
+
+  <columnHeader>
+    <band height="25">
+      <staticText>
+        <reportElement x="0"   y="0" width="120" height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Job Title]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="120" y="0" width="70"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Date]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="190" y="0" width="60"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Location]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="250" y="0" width="110" height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Cost Item]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="360" y="0" width="40"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement textAlignment="Right"><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Qty]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="400" y="0" width="65"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement textAlignment="Right"><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Unit Cost]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="465" y="0" width="70"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement textAlignment="Right"><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Total]]></text>
+      </staticText>
+    </band>
+  </columnHeader>
+
+  <detail>
+    <band height="20">
+      <textField isBlankWhenNull="true">
+        <reportElement x="0"   y="0" width="120" height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[$F{title}]]></textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="120" y="0" width="70"  height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[$F{work_date}]]></textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="190" y="0" width="60"  height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[$F{infra_name}]]></textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="250" y="0" width="110" height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[$F{cost_description}]]></textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="360" y="0" width="40"  height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[$F{quantity} != null ? $F{quantity}.toString() : ""]]>
+        </textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="400" y="0" width="65"  height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[$F{unit_cost} != null ? String.format("%,.2f", $F{unit_cost}) : ""]]>
+        </textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="465" y="0" width="70"  height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[$F{total_cost} != null ? String.format("%,.2f", $F{total_cost}) : ""]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </detail>
+
+  <columnFooter>
+    <band height="0"/>
+  </columnFooter>
+
+  <pageFooter>
+    <band height="30">
+      <staticText>
+        <reportElement x="0" y="5" width="300" height="20"/>
+        <textElement><font size="9"/></textElement>
+        <text><![CDATA[AquaCam Connect - Water Management System]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="435" y="5" width="100" height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA["Page " + $V{PAGE_NUMBER}]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </pageFooter>
+
+  <summary>
+    <band height="40">
+      <line>
+        <reportElement x="0" y="0" width="535" height="1"/>
+        <graphicElement><pen lineWidth="1.0"/></graphicElement>
+      </line>
+      <staticText>
+        <reportElement x="0" y="5" width="465" height="25"/>
+        <textElement textAlignment="Right">
+          <font size="11" isBold="true"/>
+        </textElement>
+        <text><![CDATA[TOTAL MAINTENANCE COST (FCFA):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="465" y="5" width="70" height="25"/>
+        <textElement textAlignment="Right">
+          <font size="11" isBold="true"/>
+        </textElement>
+        <textFieldExpression>
+          <![CDATA[String.format("%,.2f", $V{GRAND_TOTAL})]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </summary>
+
+</jasperReport>

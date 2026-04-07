@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="overdue_subscriptions"
+              pageWidth="595" pageHeight="842"
+              columnWidth="535" leftMargin="30" rightMargin="30"
+              topMargin="20" bottomMargin="20">
+
+  <parameter name="YEAR" class="java.lang.Integer"/>
+
+  <queryString>
+    <![CDATA[
+      SELECT
+        h.house_number,
+        h.street_address,
+        z.name                                      AS zone,
+        s.year,
+        s.member_count,
+        s.amount_due,
+        COALESCE(SUM(sp.amount), 0)                 AS amount_paid,
+        s.amount_due - COALESCE(SUM(sp.amount), 0)  AS balance,
+        CASE
+          WHEN COALESCE(SUM(sp.amount), 0) <= 0 THEN 'Unpaid'
+          ELSE 'Partial'
+        END                                         AS status,
+        cm.first_name,
+        cm.last_name,
+        cm.phone
+      FROM subscription s
+      JOIN household h         ON h.id  = s.household_id
+      JOIN water_zone z        ON z.id  = h.zone_id
+      JOIN community_member cm ON cm.household_id = h.id
+                               AND cm.is_representative = 1
+      LEFT JOIN subscription_payment sp ON sp.subscription_id = s.id
+      WHERE s.year = $P{YEAR}
+      GROUP BY
+        h.house_number, h.street_address, z.name,
+        s.year, s.member_count, s.amount_due,
+        cm.first_name, cm.last_name, cm.phone
+      HAVING COALESCE(SUM(sp.amount), 0) < s.amount_due
+      ORDER BY z.name, h.street_address
+    ]]>
+  </queryString>
+
+  <field name="house_number"  class="java.lang.String"/>
+  <field name="street_address" class="java.lang.String"/>
+  <field name="zone"          class="java.lang.String"/>
+  <field name="year"          class="java.lang.Short"/>
+  <field name="member_count"  class="java.lang.Integer"/>
+  <field name="amount_due"    class="java.math.BigDecimal"/>
+  <field name="amount_paid"   class="java.math.BigDecimal"/>
+  <field name="balance"       class="java.math.BigDecimal"/>
+  <field name="status"        class="java.lang.String"/>
+  <field name="first_name"    class="java.lang.String"/>
+  <field name="last_name"     class="java.lang.String"/>
+  <field name="phone"         class="java.lang.String"/>
+
+  <variable name="TOTAL_OUTSTANDING" class="java.math.BigDecimal" calculation="Sum">
+    <variableExpression><![CDATA[$F{balance}]]></variableExpression>
+  </variable>
+
+  <title>
+    <band height="80">
+      <staticText>
+        <reportElement x="0" y="0" width="535" height="35"/>
+        <textElement textAlignment="Center">
+          <font size="18" isBold="true"/>
+        </textElement>
+        <text><![CDATA[AquaCam Connect]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="0" y="35" width="535" height="25"/>
+        <textElement textAlignment="Center">
+          <font size="13" isBold="true"/>
+        </textElement>
+        <textFieldExpression>
+          <![CDATA["Overdue Subscriptions - " + $P{YEAR}]]>
+        </textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="0" y="60" width="535" height="20"/>
+        <textElement textAlignment="Center"><font size="10"/></textElement>
+        <textFieldExpression>
+          <![CDATA["Generated on: " + new java.util.Date().toString()]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </title>
+
+  <pageHeader>
+    <band height="0"/>
+  </pageHeader>
+
+  <columnHeader>
+    <band height="25">
+      <staticText>
+        <reportElement x="0"   y="0" width="130" height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Address]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="130" y="0" width="70"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Zone]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="200" y="0" width="110" height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Representative]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="310" y="0" width="80"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Phone]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="390" y="0" width="75"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement textAlignment="Right"><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Amount Due]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="465" y="0" width="70"  height="25" backcolor="#CCCCCC" mode="Opaque"/>
+        <textElement textAlignment="Right"><font isBold="true" size="9"/></textElement>
+        <text><![CDATA[Balance]]></text>
+      </staticText>
+    </band>
+  </columnHeader>
+
+  <detail>
+    <band height="20">
+      <textField>
+        <reportElement x="0"   y="0" width="130" height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[$F{house_number} + " " + $F{street_address}]]>
+        </textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="130" y="0" width="70"  height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[$F{zone}]]></textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="200" y="0" width="110" height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[$F{first_name} + " " + $F{last_name}]]>
+        </textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="310" y="0" width="80"  height="20"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[$F{phone}]]></textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="390" y="0" width="75"  height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[String.format("%,.2f", $F{amount_due})]]>
+        </textFieldExpression>
+      </textField>
+      <textField>
+        <reportElement x="465" y="0" width="70"  height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA[String.format("%,.2f", $F{balance})]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </detail>
+
+  <columnFooter>
+    <band height="0"/>
+  </columnFooter>
+
+  <pageFooter>
+    <band height="30">
+      <staticText>
+        <reportElement x="0" y="5" width="300" height="20"/>
+        <textElement><font size="9"/></textElement>
+        <text><![CDATA[AquaCam Connect - Water Management System]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="435" y="5" width="100" height="20"/>
+        <textElement textAlignment="Right"><font size="9"/></textElement>
+        <textFieldExpression>
+          <![CDATA["Page " + $V{PAGE_NUMBER}]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </pageFooter>
+
+  <summary>
+    <band height="40">
+      <line>
+        <reportElement x="0" y="0" width="535" height="1"/>
+        <graphicElement><pen lineWidth="1.0"/></graphicElement>
+      </line>
+      <staticText>
+        <reportElement x="0" y="5" width="465" height="25"/>
+        <textElement textAlignment="Right">
+          <font size="11" isBold="true"/>
+        </textElement>
+        <text><![CDATA[TOTAL OUTSTANDING (FCFA):]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="465" y="5" width="70" height="25"/>
+        <textElement textAlignment="Right">
+          <font size="11" isBold="true"/>
+        </textElement>
+        <textFieldExpression>
+          <![CDATA[String.format("%,.2f", $V{TOTAL_OUTSTANDING})]]>
+        </textFieldExpression>
+      </textField>
+    </band>
+  </summary>
+
+</jasperReport>
